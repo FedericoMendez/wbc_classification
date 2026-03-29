@@ -7,10 +7,11 @@ import pandas as pd
 import config
 
 class WBCDataset(Dataset):
-    def __init__(self, df_path, img_dir, augment=False):
+    def __init__(self, df_path, img_dir, augment=False, denoise=True):
         self.df = pd.read_csv(df_path).reset_index(drop=True)
         self.img_dir = img_dir
         self.augment = augment
+        self.denoise = denoise
         self.class_to_idx = config.CLASS_TO_IDX
         self.mean = torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1)
         self.std = torch.tensor([0.229, 0.224, 0.225]).view(3, 1, 1)
@@ -28,6 +29,9 @@ class WBCDataset(Dataset):
         if image is None:
             raise ValueError(f"Image not found or unreadable: {img_path}")
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        
+        if self.denoise:
+            image = denoise(image) 
         
         if self.augment:
 
@@ -59,10 +63,10 @@ class WBCDataset(Dataset):
         return image, torch.tensor(label_idx, dtype=torch.long), img_name
 
 class WBCTestDataset(Dataset):
-    def __init__(self, csv_file, img_dir):
+    def __init__(self, csv_file, img_dir, denoise=True):
         self.df = pd.read_csv(csv_file)
         self.img_dir = img_dir
-        
+        self.denoise = denoise
         self.mean = torch.tensor([0.485, 0.456, 0.406]).view(3,1,1)
         self.std  = torch.tensor([0.229, 0.224, 0.225]).view(3,1,1)
 
@@ -75,6 +79,10 @@ class WBCTestDataset(Dataset):
 
         image = cv2.imread(img_path)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        
+        if self.denoise:
+            image = denoise(image)  
+        
         image = cv2.resize(image, (224, 224))
         image = image.astype(np.float32) / 255.0
         image = np.transpose(image, (2, 0, 1))
@@ -84,8 +92,32 @@ class WBCTestDataset(Dataset):
 
         return image
     
-def is_noisy_v2(img, threshold=10):
+# --- Noise score ---
+def noise_score(img):
     median = cv2.medianBlur(img, 3)
     diff = np.abs(img.astype(np.int16) - median.astype(np.int16))
-    score = np.mean(diff)
-    return score > threshold
+    return np.mean(diff)
+
+# --- Classification ---
+def classify_noise(score, t1=20, t2=40):
+    if score < t1:
+        return "clean"
+    elif score < t2:
+        return "noisy"
+    else:
+        return "very_noisy"
+    
+# --- Denoising per category ---
+def denoise(img):
+    score = noise_score(img)
+    category = classify_noise(score)
+    if category == "clean":
+        return img  # no change
+    
+    elif category == "noisy":
+        # mild denoising
+        return cv2.fastNlMeansDenoisingColored(img, None, 20, 20, 7, 21)
+    
+    else:  # very_noisy
+        # stronger denoising
+        return cv2.fastNlMeansDenoisingColored(img, None, 40, 40, 7, 21)

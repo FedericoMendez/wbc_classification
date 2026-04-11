@@ -1,0 +1,22 @@
+project: wbc-classification
+
+device: cuda
+
+train_csv: train_split.csv
+val_csv: val_split.csv
+train_dir: data/train_denoised
+
+class_names: ['BA', 'BL', 'BNE', 'EO', 'LY', 'MMY', 'MO', 'MY', 'PC', 'PLY', 'PMY', 'SNE', 'VLY']
+batch_size: 128
+epochs: 50
+lr: 1e-4
+weight_decay: 1e-4
+
+augmentation: true
+
+weights_path: "resnet50weightedsamplercosinedenoised"
+
+imbalance_strategy: sampler   # class_weights | sampler | both | none
+
+scheduler:
+  name: cosine

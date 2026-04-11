@@ -1,0 +1,23 @@
+project: wbc-classification-neutrophil
+
+device: cuda
+
+train_csv: cluster_splits/train_neutrophil.csv
+val_csv: cluster_splits/val_neutrophil.csv
+train_dir: data/train_denoised
+
+class_names: ['BNE', 'SNE']
+
+batch_size: 128
+epochs: 40
+lr: 1e-4
+weight_decay: 1e-4
+
+augmentation: true
+
+weights_path: "specialist_neutrophil"
+
+imbalance_strategy: both
+
+scheduler:
+  name: cosine

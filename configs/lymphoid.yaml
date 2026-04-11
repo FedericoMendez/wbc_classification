@@ -1,0 +1,23 @@
+project: wbc-classification-lymphoid
+
+device: cuda
+
+train_csv: cluster_splits/train_lymphoid.csv
+val_csv: cluster_splits/val_lymphoid.csv
+train_dir: data/train_denoised
+
+class_names: ['LY', 'VLY', 'PLY']
+
+batch_size: 64
+epochs: 35
+lr: 2e-4
+weight_decay: 1e-4
+
+augmentation: true
+
+weights_path: "specialist_lymphoid"
+
+imbalance_strategy: class_weights
+
+scheduler:
+  name: cosine

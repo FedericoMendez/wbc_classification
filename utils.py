@@ -6,7 +6,7 @@ import os
 import pandas as pd
 
 class WBCDataset(Dataset):
-    def __init__(self, class_names, df_path, img_dir, augment=False):
+    def __init__(self, class_names, df_path, img_dir, augment=False, center_crop=True):
         self.df = pd.read_csv(df_path).reset_index(drop=True)
         self.img_dir = img_dir
         self.augment = augment
@@ -48,7 +48,10 @@ class WBCDataset(Dataset):
             beta  = np.random.uniform(-0.05, 0.05)        # brightness
             image = np.clip(alpha * image + beta * 255, 0, 255).astype(np.uint8)
         
-        image = cv2.resize(image, (224, 224))
+        if center_crop:
+            image = center_crop(image)
+        else:
+            image = cv2.resize(image, (224, 224))
         image = image.astype(np.float32) / 255.0
         image = np.transpose(image, (2, 0, 1))
         image = torch.tensor(image, dtype=torch.float32)
@@ -117,3 +120,10 @@ def denoise(img):
     else:  # very_noisy
         # stronger denoising
         return cv2.fastNlMeansDenoisingColored(img, None, 40, 40, 7, 21)
+    
+def center_crop(image, size=224):
+    h, w = image.shape[:2]
+    cx, cy = w // 2, h // 2
+
+    half = size // 2
+    return image[cy-half:cy+half, cx-half:cx+half]

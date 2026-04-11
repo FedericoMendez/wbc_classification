@@ -1,0 +1,23 @@
+project: wbc-classification-myeloid
+
+device: cuda
+
+train_csv: cluster_splits/train_myeloid.csv
+val_csv: cluster_splits/val_myeloid.csv
+train_dir: data/train_denoised
+
+class_names: ['MY', 'MMY', 'PMY']
+
+batch_size: 32
+epochs: 30
+lr: 5e-4
+weight_decay: 1e-4
+
+augmentation: true
+
+weights_path: "specialist_myeloid"
+
+imbalance_strategy: class_weights
+
+scheduler:
+  name: cosine

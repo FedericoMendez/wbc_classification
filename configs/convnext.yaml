@@ -1,0 +1,30 @@
+project: wbc-convnext
+
+device: cuda
+
+train_csv: train_split.csv
+val_csv: val_split.csv
+train_dir: data/train_denoised
+
+class_names: ['BA', 'BL', 'BNE', 'EO', 'LY', 'MMY', 'MO', 'MY', 'PC', 'PLY', 'PMY', 'SNE', 'VLY']
+
+# Training
+batch_size: 32       
+epochs: 50
+
+lr: 3e-4              
+weight_decay: 0.05    # important for convnext
+
+augmentation: true
+center_crop: true
+# Imbalance
+imbalance_strategy: class_weights
+
+# Scheduler
+scheduler:
+  name: cosine_warmup
+  warmup_epochs: 2
+  start_factor: 0.01
+
+# Saving
+weights_path: "convnext"

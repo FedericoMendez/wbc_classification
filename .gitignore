@@ -1,5 +1,9 @@
 data/
 *.csv
+!train_metadata.csv
+!train_split.csv
+!val_split.csv
+!test_metadata.csv
 .venv/
 best_models/
 wandb/

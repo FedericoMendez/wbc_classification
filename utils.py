@@ -4,15 +4,14 @@ import torch
 import numpy as np
 import os
 import pandas as pd
-import config
 
 class WBCDataset(Dataset):
-    def __init__(self, df_path, img_dir, augment=False, denoise=True):
+    def __init__(self, class_names, df_path, img_dir, augment=False):
         self.df = pd.read_csv(df_path).reset_index(drop=True)
         self.img_dir = img_dir
         self.augment = augment
         self.denoise = denoise
-        self.class_to_idx = config.CLASS_TO_IDX
+        self.class_to_idx = {cls: i for i, cls in enumerate(class_names)}
         self.mean = torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1)
         self.std = torch.tensor([0.229, 0.224, 0.225]).view(3, 1, 1)
         
@@ -29,9 +28,6 @@ class WBCDataset(Dataset):
         if image is None:
             raise ValueError(f"Image not found or unreadable: {img_path}")
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        
-        if self.denoise:
-            image = denoise(image) 
         
         if self.augment:
 

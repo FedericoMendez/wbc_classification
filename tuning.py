@@ -128,7 +128,8 @@ def main():
 
     os.environ["WANDB_START_METHOD"] = "thread"
     wandb.init(project=config["project"], config=config)
-
+    wandb.define_metric("epoch")
+    wandb.define_metric("*", step_metric="epoch")
     device = torch.device(config["device"])
 
     # -------------------------

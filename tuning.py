@@ -138,13 +138,15 @@ def main():
     train_dataset = WBCDataset(config["class_names"],
         config["train_csv"],
         config["train_dir"],
-        augment=config["augmentation"]
+        augment=config["augmentation"],
+        center_crop=config["center_crop"]
     )
 
     val_dataset = WBCDataset(config["class_names"],
         config["val_csv"],
         config["train_dir"],
-        augment=False
+        augment=False,
+        center_crop=config["center_crop"]
     )
 
     # -------------------------
@@ -152,7 +154,7 @@ def main():
     # -------------------------
     train_df = pd.read_csv(config["train_csv"])
     labels = train_df["label"].values
-    strategy = config.get("imbalance_strategy", "class_weights")
+    strategy = config.get("imbalance_strategy")
 
     classes = np.array(config["class_names"])
 
@@ -313,6 +315,9 @@ def main():
             log_confusion_matrix(all_true, all_preds, config["class_names"])
 
     print("Best Val F1:", best_val_f1)
+    wandb.log({
+            "best_val_macrof1": best_val_f1
+        })
 
 
 if __name__ == "__main__":

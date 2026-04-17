@@ -16,7 +16,7 @@ lr: 3e-4
 weight_decay: 0.05    # important for convnext
 
 augmentation: true
-center_crop: true
+center_crop: false
 # Imbalance
 imbalance_strategy: class_weights
 

@@ -11,6 +11,7 @@ class WBCDataset(Dataset):
         self.img_dir = img_dir
         self.augment = augment
         self.denoise = denoise
+        self.center_crop = center_crop
         self.class_to_idx = {cls: i for i, cls in enumerate(class_names)}
         self.mean = torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1)
         self.std = torch.tensor([0.229, 0.224, 0.225]).view(3, 1, 1)
@@ -48,8 +49,8 @@ class WBCDataset(Dataset):
             beta  = np.random.uniform(-0.05, 0.05)        # brightness
             image = np.clip(alpha * image + beta * 255, 0, 255).astype(np.uint8)
         
-        if center_crop:
-            image = center_crop(image)
+        if self.center_crop:
+            image = apply_center_crop(image)
         else:
             image = cv2.resize(image, (224, 224))
         image = image.astype(np.float32) / 255.0
@@ -62,10 +63,11 @@ class WBCDataset(Dataset):
         return image, torch.tensor(label_idx, dtype=torch.long), img_name
 
 class WBCTestDataset(Dataset):
-    def __init__(self, csv_file, img_dir, denoise=True):
+    def __init__(self, csv_file, img_dir, denoise=True, center_crop = False):
         self.df = pd.read_csv(csv_file)
         self.img_dir = img_dir
         self.denoise = denoise
+        self.center_crop = center_crop
         self.mean = torch.tensor([0.485, 0.456, 0.406]).view(3,1,1)
         self.std  = torch.tensor([0.229, 0.224, 0.225]).view(3,1,1)
 
@@ -82,7 +84,10 @@ class WBCTestDataset(Dataset):
         if self.denoise:
             image = denoise(image)  
         
-        image = cv2.resize(image, (224, 224))
+        if self.center_crop:
+            image = apply_center_crop(image)
+        else:
+            image = cv2.resize(image, (224, 224))
         image = image.astype(np.float32) / 255.0
         image = np.transpose(image, (2, 0, 1))
         image = torch.tensor(image, dtype=torch.float32)
@@ -121,7 +126,7 @@ def denoise(img):
         # stronger denoising
         return cv2.fastNlMeansDenoisingColored(img, None, 40, 40, 7, 21)
     
-def center_crop(image, size=224):
+def apply_center_crop(image, size=224):
     h, w = image.shape[:2]
     cx, cy = w // 2, h // 2
 

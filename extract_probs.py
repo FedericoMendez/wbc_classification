@@ -17,10 +17,17 @@ from utils import WBCTestDataset, WBCDataset
 parser = argparse.ArgumentParser(description="Extract probabilities for ensembling")
 
 parser.add_argument("--weights", type=str, required=True)
+parser.add_argument("--metadata", type=str, default="val_split.csv")
 parser.add_argument("--model", type=str, required=True, choices=["resnet50", "convnext_base"])
 parser.add_argument("--batch_size", type=int, default=128)
 parser.add_argument("--center_crop", action="store_true")
 parser.add_argument("--denoise", action="store_true")
+
+parser.add_argument(
+    "--classes",
+    nargs="+",
+    default=['BA','BL','BNE','EO','LY','MMY','MO','MY','PC','PLY','PMY','SNE','VLY']
+)
 
 args = parser.parse_args()
 
@@ -29,8 +36,12 @@ MODEL_NAME = args.model
 BATCH_SIZE = args.batch_size
 CENTER_CROP = args.center_crop
 DENOISE = args.denoise
+CLASSES = args.classes
+METADATA = args.metadata
 
 print(f"Model: {MODEL_NAME}")
+print(f"Class Names: {CLASSES}")
+print(f"Metadata: {METADATA}")
 print(f"Weights: {WEIGHTS_PATH}")
 print(f"Center crop: {CENTER_CROP}")
 print(f"Denoise: {DENOISE}")
@@ -49,11 +60,11 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 def build_model(name):
     if name == "resnet50":
         model = models.resnet50(weights=None)
-        model.fc = nn.Linear(model.fc.in_features, 13)
+        model.fc = nn.Linear(model.fc.in_features, len(CLASSES))
 
     elif name == "convnext_base":
         model = models.convnext_base(weights=None)
-        model.classifier[2] = nn.Linear(model.classifier[2].in_features, 13)
+        model.classifier[2] = nn.Linear(model.classifier[2].in_features, len(CLASSES))
 
     return model
 
@@ -77,22 +88,24 @@ def make_loader(csv_path, img_dir, test=False):
         dataset = WBCTestDataset(
             csv_path,
             img_dir,
-            denoise=DENOISE,
             center_crop=CENTER_CROP
         )
     else:
         dataset = WBCDataset(
-            class_names=['BA', 'BL', 'BNE', 'EO', 'LY', 'MMY', 'MO', 'MY', 'PC', 'PLY', 'PMY', 'SNE', 'VLY'],
+            class_names= CLASSES,
             df_path=csv_path,
             img_dir=img_dir,
             augment=False,
-            center_crop=CENTER_CROP
+            center_crop=CENTER_CROP,
+            allow_unknown_labels=True
         )
 
     return DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=0, pin_memory=True)
-
-val_loader  = make_loader("val_split.csv", "data/train_denoised")
-test_loader = make_loader("test_metadata.csv", "data/test_denoised", test=True)
+extra = ""
+if DENOISE:
+    extra= "_denoised"
+val_loader  = make_loader(METADATA, f"data/train{extra}")
+test_loader = make_loader("test_metadata.csv", f"data/test{extra}", test=True)
 
 # =========================
 # PROBABILITY EXTRACTION
@@ -131,11 +144,20 @@ suffix = f"{MODEL_NAME}_crop{int(CENTER_CROP)}_denoise{int(DENOISE)}"
 
 os.makedirs("probs", exist_ok=True)
 
-val_path  = f"probs/val_probs_{base_name}_{suffix}.npy"
-test_path = f"probs/test_probs_{base_name}_{suffix}.npy"
+val_path  = f"probs/val_probs_{base_name}_{suffix}.npz"
+test_path = f"probs/test_probs_{base_name}_{suffix}.npz"
 
-np.save(val_path, val_probs)
-np.save(test_path, test_probs)
+np.savez(
+    val_path,
+    probs=val_probs,
+    classes=np.array(CLASSES)
+)
+
+np.savez(
+    test_path,
+    probs=test_probs,
+    classes=np.array(CLASSES)
+)
 
 print(f"\nSaved:")
 print(val_path)
